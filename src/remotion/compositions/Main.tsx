@@ -1,55 +1,144 @@
-import { AbsoluteFill, Artifact, useCurrentFrame, useVideoConfig } from "remotion";
-import { loadFont } from "@remotion/google-fonts/SpaceMono";
+import { AbsoluteFill, Audio, Sequence, Artifact, useCurrentFrame } from "remotion";
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { loadFont } from "@remotion/google-fonts/Inter";
+import { fade } from "@remotion/transitions/fade";
 
-const LoaderDots = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+import { AmbientBackground } from "./scenes/AmbientBackground";
+import { HeroScene } from "./scenes/HeroScene";
+import { FeatureCard } from "./scenes/FeatureCard";
+import { CTAScene } from "./scenes/CTAScene";
+import { BoltIcon, ShieldIcon, HeadsetIcon } from "./scenes/Icons";
 
-  const dot = (index: number) => {
-    const phase = (frame / fps) * 2 * Math.PI + index * 0.8;
-    return 0.35 + Math.max(0, Math.sin(phase)) * 0.65;
-  };
+// Wise brand colors:
+// Primary dark green: #163300
+// Accent bright green: #9FE870
+// Background: #FFFFFF
 
-  return (
-    <span className="inline-flex gap-1">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="inline-block text-sky-300"
-          style={{ opacity: dot(i) }}
-        >
-          .
-        </span>
-      ))}
-    </span>
-  );
-};
+// Scene durations (in frames at 30fps)
+const HERO_DURATION = 120; // 4 seconds
+const FEATURE_DURATION = 130; // ~4.3 seconds each
+const CTA_DURATION = 135; // 4.5 seconds (extra buffer at end)
+const TRANSITION_DURATION = 15; // 0.5 second transitions
+
+// Total: 120 + 130*3 + 135 - 4*15 = 585 frames = 19.5s
+
+// SFX URLs
+const WHOOSH_SFX =
+  "https://pub-e3bfc0083b0644b296a7080b21024c5f.r2.dev/sfx/1773645267067_6ynrsskbdik_sfx_subtle_corporate_tech_whoosh_t.mp3";
+const CHIME_SFX =
+  "https://pub-e3bfc0083b0644b296a7080b21024c5f.r2.dev/sfx/1773645274354_cr9dk6055ye_sfx_soft_digital_notification_chim.mp3";
 
 export const Main: React.FC = () => {
   const { fontFamily } = loadFont();
   const frame = useCurrentFrame();
+
+  // Transition timings for SFX placement
+  const t1 = HERO_DURATION - TRANSITION_DURATION; // ~105
+  const t2 = t1 + FEATURE_DURATION - TRANSITION_DURATION; // ~220
+  const t3 = t2 + FEATURE_DURATION - TRANSITION_DURATION; // ~335
+  const t4 = t3 + FEATURE_DURATION - TRANSITION_DURATION; // ~450
+
   return (
     <>
-      {/* Leave this here to generate a thumbnail */}
+      {/* Thumbnail artifact */}
       {frame === 0 && (
         <Artifact content={Artifact.Thumbnail} filename="thumbnail.jpeg" />
       )}
-      <AbsoluteFill className="flex items-center justify-center bg-[#0f1115]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.28),transparent_45%),radial-gradient(circle_at_70%_60%,rgba(16,185,129,0.2),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:48px_48px] opacity-40" />
-        <div
-          className="flex flex-col items-center gap-4 text-center text-white drop-shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
-          style={{ fontFamily, fontWeight: 700, letterSpacing: "0.01em" }}
-        >
-          <div className="text-4xl md:text-5xl font-bold">
-            <span className="font-extrabold text-sky-300">TypeFrames</span> is
-            building your video
-            <LoaderDots />
-          </div>
-          <div className="text-base md:text-lg text-white/70">
-            Rendering scenes, timing transitions, and polishing frames.
-          </div>
-        </div>
+
+      <AbsoluteFill
+        style={{
+          fontFamily,
+          background: "#FFFFFF",
+        }}
+      >
+        {/* Persistent ambient background */}
+        <AmbientBackground />
+
+        {/* Scene transitions */}
+        <TransitionSeries>
+          {/* Scene 1: Hero intro */}
+          <TransitionSeries.Sequence durationInFrames={HERO_DURATION}>
+            <HeroScene />
+          </TransitionSeries.Sequence>
+
+          <TransitionSeries.Transition
+            presentation={fade()}
+            timing={linearTiming({ durationInFrames: TRANSITION_DURATION })}
+          />
+
+          {/* Scene 2: Instant Transfers */}
+          <TransitionSeries.Sequence durationInFrames={FEATURE_DURATION}>
+            <FeatureCard
+              icon={<BoltIcon />}
+              title="Instant Transfers"
+              description="74% of transfers arrive in under 20 seconds. Send money to 140+ countries with the speed of a text message."
+              stat={{ from: 0, to: 20, suffix: "s" }}
+              statLabel="average delivery time"
+              index={0}
+            />
+          </TransitionSeries.Sequence>
+
+          <TransitionSeries.Transition
+            presentation={fade()}
+            timing={linearTiming({ durationInFrames: TRANSITION_DURATION })}
+          />
+
+          {/* Scene 3: Transparent Pricing */}
+          <TransitionSeries.Sequence durationInFrames={FEATURE_DURATION}>
+            <FeatureCard
+              icon={<ShieldIcon />}
+              title="Transparent Pricing"
+              description="Always the real exchange rate. No hidden markups, no surprises. You see exactly what you pay before you send."
+              stat={{ from: 0, to: 0, suffix: " hidden fees", prefix: "" }}
+              statLabel="real mid-market exchange rate"
+              index={1}
+            />
+          </TransitionSeries.Sequence>
+
+          <TransitionSeries.Transition
+            presentation={fade()}
+            timing={linearTiming({ durationInFrames: TRANSITION_DURATION })}
+          />
+
+          {/* Scene 4: 24/7 Support */}
+          <TransitionSeries.Sequence durationInFrames={FEATURE_DURATION}>
+            <FeatureCard
+              icon={<HeadsetIcon />}
+              title="24/7 Customer Support"
+              description="Round-the-clock support from a team that speaks your language. Help whenever you need it, wherever you are."
+              stat={{ from: 0, to: 24, suffix: "/7" }}
+              statLabel="always available support"
+              index={2}
+            />
+          </TransitionSeries.Sequence>
+
+          <TransitionSeries.Transition
+            presentation={fade()}
+            timing={linearTiming({ durationInFrames: TRANSITION_DURATION })}
+          />
+
+          {/* Scene 5: CTA */}
+          <TransitionSeries.Sequence durationInFrames={CTA_DURATION}>
+            <CTAScene />
+          </TransitionSeries.Sequence>
+        </TransitionSeries>
+
+        {/* Sound effects at transition points */}
+        <Sequence from={0}>
+          <Audio src={CHIME_SFX} volume={0.15} />
+        </Sequence>
+        <Sequence from={t1}>
+          <Audio src={WHOOSH_SFX} volume={0.12} />
+        </Sequence>
+        <Sequence from={t2}>
+          <Audio src={WHOOSH_SFX} volume={0.12} />
+        </Sequence>
+        <Sequence from={t3}>
+          <Audio src={WHOOSH_SFX} volume={0.12} />
+        </Sequence>
+        <Sequence from={t4}>
+          <Audio src={CHIME_SFX} volume={0.18} />
+        </Sequence>
       </AbsoluteFill>
     </>
   );
